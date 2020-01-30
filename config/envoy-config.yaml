@@ -1,0 +1,52 @@
+static_resources:
+  listeners:
+  - name: listener_0
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 443
+    filter_chains:
+      tls_context:
+        common_tls_context:
+          tls_certificates:
+            - certificate_chain:
+                filename: /home/ec2-user/envoy/nvmcloud-stage-01.cisco.com-public-cert.pem 
+              private_key:
+                filename: /home/ec2-user/envoy/nvmcloud-stage-01.cisco.com-private-key-ecdsa.pem
+      filters:
+      - name: envoy.tcp_proxy
+        config:
+          stat_prefix: "tcp_envoy_lb"
+          cluster: local_service_cluster
+          access_log:
+          - name: envoy.file_access_log
+            config:
+              path: "/tmp/envoy_router_access.log"
+              json_format: {
+                default: "[%START_TIME%] %REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL% 
+                  %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% 
+                  %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% %REQ(X-FORWARDED-FOR)% %REQ(USER-AGENT)% 
+                  %REQ(X-REQUEST-ID)% %REQ(:AUTHORITY)% %UPSTREAM_HOST%",
+                response_code_details: "%RESPONSE_CODE_DETAILS%",
+                route_name: "%ROUTE_NAME%",
+                }
+  clusters:
+  - name: local_service_cluster
+    connect_timeout: 25s
+    type: strict_dns
+    lb_policy: round_robin
+    load_assignment:
+      cluster_name: local_service
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: private-NLB-4772f54d1693e3f2.elb.us-east-1.amazonaws.com
+                port_value: 8040
+admin:
+  access_log_path: "/tmp/admin_access.log"
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901
